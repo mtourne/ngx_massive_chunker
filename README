@@ -1,0 +1,60 @@
+Name
+    ngx_massive_chunker - debug module to force output in tiny chunks.
+
+    *This module is not distributed with the Nginx source.* See the
+    installation instructions.
+
+
+Use Case
+    This module is intended to be used with 2 nginx instances, one with
+    a proxy_pass to the other while using keepalives.
+
+
+Status
+    This module is intended for debugging only, this shouldn't be used
+    in production under any circumnstances.
+
+
+Synopsis
+
+     server {
+
+        location /chunks {
+            mass_chunk on;
+            mass_chunk_multi_packets on;
+        }
+     }
+
+
+Directives
+  mass_chunk
+     syntax: mass_chunk on|off
+
+     default: mass_chunk off
+
+     enable the massive chunking, it will send the content into chunks of 10 bytes.
+
+  mass_chunk_multi_packets
+     syntax: mass_chunk_multi_packets on|off
+
+     default: mass_chunk_multi_packets off
+
+     forces the chunking to be send into different tcp packets.
+
+
+Installation
+
+     To build nginx with the massive chunker :
+
+     cd nginx
+
+     ./configure --add-module=/path/to/ngx_massive_chunker
+
+     make && make install
+
+
+Copyright
+
+    Copyright (C) 2011, Matthieu Tourne <matthieu.tourne@gmail.com>.
+
+
