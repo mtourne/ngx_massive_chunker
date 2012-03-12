@@ -21,6 +21,7 @@ Synopsis
 
         location /chunks {
             mass_chunk on;
+            mass_chunk_max_size 3;
             mass_chunk_multi_packets on;
         }
      }
@@ -32,7 +33,15 @@ Directives
 
      default: mass_chunk off
 
-     enable the massive chunking, it will send the content into chunks of 10 bytes.
+     enable the massive chunking, it will split the content into separate
+     chunks.
+
+  mass_chunk_max_size
+     syntax: mass_chunk_max_size <size>
+
+     default: mass_chunk_max_size 10
+
+     configure maximum number of bytes that will be send in a single chunk.
 
   mass_chunk_multi_packets
      syntax: mass_chunk_multi_packets on|off
