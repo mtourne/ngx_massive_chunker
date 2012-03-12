@@ -41,15 +41,16 @@ Directives
 
      default: mass_chunk_max_size 10
 
-     configure maximum number of bytes that will be send in a single chunk.
+     configure maximum number of bytes that will be sent in a single chunk.
 
   mass_chunk_max_chunks
      syntax: mass_chunk_max_chunks <size>
 
      default: mass_chunk_max_chunks 0
 
-     configure maximum number of chunks that will be send in a single chain
+     configure maximum number of chunks that will be sent in a single chain
      (for local debugging) or TCP packet (for remote debugging).
+     Note: 0 means off, all the chunks will be sent in the same chain.
 
 
 Installation
