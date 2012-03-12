@@ -22,7 +22,7 @@ Synopsis
         location /chunks {
             mass_chunk on;
             mass_chunk_max_size 3;
-            mass_chunk_multi_packets on;
+            mass_chunk_max_chunks 3;
         }
      }
 
@@ -43,12 +43,13 @@ Directives
 
      configure maximum number of bytes that will be send in a single chunk.
 
-  mass_chunk_multi_packets
-     syntax: mass_chunk_multi_packets on|off
+  mass_chunk_max_chunks
+     syntax: mass_chunk_max_chunks <size>
 
-     default: mass_chunk_multi_packets off
+     default: mass_chunk_max_chunks 0
 
-     forces the chunking to be send into different tcp packets.
+     configure maximum number of chunks that will be send in a single chain
+     (for local debugging) or TCP packet (for remote debugging).
 
 
 Installation
