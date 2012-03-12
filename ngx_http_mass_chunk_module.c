@@ -7,11 +7,10 @@
 #include <ngx_core.h>
 #include <ngx_http.h>
 
-#define CHUNK_SIZE 10
-
 typedef struct {
     ngx_flag_t          enable;
-    ngx_flag_t          multiple_packets;
+    size_t              max_size;
+    size_t              max_chunks;
 } ngx_http_mass_chunk_loc_conf_t;
 
 typedef struct {
@@ -41,13 +40,20 @@ static ngx_command_t ngx_http_mass_chunk_commands[] = {
       offsetof(ngx_http_mass_chunk_loc_conf_t, enable),
       NULL },
 
-
-    { ngx_string("mass_chunk_multi_packets"),
+    { ngx_string("mass_chunk_max_size"),
       NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF
-      |NGX_HTTP_LIF_CONF|NGX_CONF_FLAG,
-      ngx_conf_set_flag_slot,
+      |NGX_HTTP_LIF_CONF|NGX_CONF_TAKE1,
+      ngx_conf_set_size_slot,
       NGX_HTTP_LOC_CONF_OFFSET,
-      offsetof(ngx_http_mass_chunk_loc_conf_t, multiple_packets),
+      offsetof(ngx_http_mass_chunk_loc_conf_t, max_size),
+      NULL },
+
+    { ngx_string("mass_chunk_max_chunks"),
+      NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF
+      |NGX_HTTP_LIF_CONF|NGX_CONF_TAKE1,
+      ngx_conf_set_size_slot,
+      NGX_HTTP_LOC_CONF_OFFSET,
+      offsetof(ngx_http_mass_chunk_loc_conf_t, max_chunks),
       NULL },
 
     ngx_null_command
@@ -93,7 +99,7 @@ static ngx_int_t ngx_http_mass_chunk_header_filter(ngx_http_request_t *r) {
 
     lcf = ngx_http_get_module_loc_conf(r, ngx_http_mass_chunk_module);
 
-    if (!lcf->enable) {
+    if (!lcf->enable || !lcf->max_size) {
         return ngx_http_next_header_filter(r);
     }
 
@@ -124,6 +130,7 @@ ngx_http_mass_chunk_body_filter(ngx_http_request_t *r, ngx_chain_t *in) {
     u_char                              *copy_end;
     ngx_buf_t                           *b;
     ngx_int_t                           rc;
+    ngx_int_t                           num;
 
     ctx = ngx_http_get_module_ctx(r, ngx_http_mass_chunk_module);
     if (ctx == NULL) {
@@ -131,6 +138,8 @@ ngx_http_mass_chunk_body_filter(ngx_http_request_t *r, ngx_chain_t *in) {
     }
 
     lcf = ngx_http_get_module_loc_conf(r, ngx_http_mass_chunk_module);
+
+    num = 1;
 
     while (in) {
 
@@ -142,15 +151,12 @@ ngx_http_mass_chunk_body_filter(ngx_http_request_t *r, ngx_chain_t *in) {
         while (copy_end < in->buf->last) {
 
             copy_start = copy_end;
-            copy_end = copy_start + CHUNK_SIZE;
 
             if (copy_start > in->buf->last) {
                 return NGX_ERROR;
             }
 
-            if (copy_end > in->buf->last) {
-                copy_end = in->buf->last;
-            }
+            copy_end = ngx_min(copy_start + lcf->max_size, in->buf->last);
 
             /* create buf */
             cl = ngx_chain_get_free_buf(r->pool, &ctx->free);
@@ -178,7 +184,7 @@ ngx_http_mass_chunk_body_filter(ngx_http_request_t *r, ngx_chain_t *in) {
             *ctx->last_out = cl;
             ctx->last_out = &cl->next;
 
-            if (lcf->multiple_packets) {
+            if (lcf->max_chunks && num++ % lcf->max_chunks == 0) {
                 if (ngx_http_next_body_filter(r, ctx->out) != NGX_OK) {
                     return NGX_ERROR;
                 }
@@ -239,7 +245,8 @@ ngx_http_mass_chunk_create_loc_conf(ngx_conf_t *cf) {
      */
 
     lcf->enable = NGX_CONF_UNSET;
-    lcf->multiple_packets = NGX_CONF_UNSET;
+    lcf->max_size = NGX_CONF_UNSET_SIZE;
+    lcf->max_chunks = NGX_CONF_UNSET_SIZE;
 
     return lcf;
 }
@@ -250,7 +257,9 @@ ngx_http_mass_chunk_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child) {
     ngx_http_mass_chunk_loc_conf_t        *conf = child;
 
     ngx_conf_merge_value(conf->enable, prev->enable, 0);
-    ngx_conf_merge_value(conf->multiple_packets, prev->multiple_packets, 0);
+
+    ngx_conf_merge_size_value(conf->max_size, prev->max_size, 10);
+    ngx_conf_merge_size_value(conf->max_chunks, prev->max_chunks, 0);
 
     return NGX_CONF_OK;
 }
